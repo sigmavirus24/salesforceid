@@ -30,7 +30,8 @@ jobs: # basic units of work in a run
       - run:
           name: Run benchmarks
           command:
-            make benchmark
+            trap "go-junit-report <${TEST_RESULTS}/go-bench.out > ${TEST_RESULTS}/go-bench-report.xml" EXIT
+            make benchmark | tee ${TEST_RESULTS}/go-bench.out
 
       - save_cache: # Store cache in the /go/pkg directory
           key: v1-pkg-cache
