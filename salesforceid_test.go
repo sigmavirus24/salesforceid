@@ -290,7 +290,7 @@ func ExampleSalesforceID_To15() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("%s => %s", fifteen, eighteen)
+	fmt.Printf("%s => %s", eighteen, fifteen)
 	// Output: 00d000000000062eaa => 00D000000000062
 }
 
