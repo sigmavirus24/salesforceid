@@ -5,7 +5,10 @@ import (
 	"errors"
 )
 
-// SFID provides certain methods that
+// SFID provides the interface that SalesforceID implements as a concrete
+// type. This is provided for testing purposes more than any other reason. If
+// you expect you'll want to replace SalesforceID in testing, feel free to use
+// this.
 type SFID interface {
 	To15() (SFID, error)
 	To18() (SFID, error)
@@ -47,7 +50,8 @@ func (s SalesforceID) String() string {
 }
 
 // To15 converts the given SalesforceID to a 15-character, case-sensitive,
-// Salesforce ID.
+// Salesforce ID. If the SalesforceID is an 18-character identifier, it
+// ensures that the 15-character identifier is the proper casing.
 func (s SalesforceID) To15() (SFID, error) {
 	oldSfid := s.id
 	if len(oldSfid) != 15 && len(oldSfid) != 18 {
