@@ -56,7 +56,7 @@ func TestTo18(t *testing.T) {
 func BenchmarkTo18(b *testing.B) {
 	sfid := New("0a3d0000001ah2a")
 	for i := 0; i < b.N; i++ {
-		sfid.To18()
+		_, _ = sfid.To18()
 	}
 }
 
@@ -108,7 +108,7 @@ func TestTo15(t *testing.T) {
 func BenchmarkTo15(b *testing.B) {
 	sfid := New("00d000000000062eaa")
 	for i := 0; i < b.N; i++ {
-		sfid.To15()
+		_, _ = sfid.To15()
 	}
 }
 
@@ -162,7 +162,7 @@ func TestNormalize(t *testing.T) {
 func BenchmarkNormalize(b *testing.B) {
 	sfid := New("00d000000000062eaa")
 	for i := 0; i < b.N; i++ {
-		sfid.Normalize()
+		_, _ = sfid.Normalize()
 	}
 }
 
@@ -192,7 +192,7 @@ func TestKeyPrefix(t *testing.T) {
 func BenchmarkKeyPrefix(b *testing.B) {
 	sfid := New("0a3D0000001aH2A")
 	for i := 0; i < b.N; i++ {
-		sfid.KeyPrefix()
+		_ = sfid.KeyPrefix()
 	}
 }
 
