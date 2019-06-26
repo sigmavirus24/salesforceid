@@ -284,6 +284,16 @@ func ExampleSalesforceID_To18() {
 	// Output: 00D000000000062 => 00D000000000062EAA
 }
 
+func ExampleSalesforceID_To15() {
+	eighteen := New("00d000000000062eaa")
+	fifteen, err := eighteen.To15()
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("%s => %s", fifteen, eighteen)
+	// Output: 00d000000000062eaa => 00D000000000062
+}
+
 func ExampleSalesforceID_Normalize() {
 	fifteen := New("00D000000000062")
 	normalized, err := fifteen.Normalize()
