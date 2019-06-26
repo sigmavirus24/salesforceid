@@ -29,7 +29,7 @@ jobs: # basic units of work in a run
 
       - run:
           name: Run benchmarks
-          command:
+          command: |
             trap "go-junit-report <${TEST_RESULTS}/go-bench.out > ${TEST_RESULTS}/go-bench-report.xml" EXIT
             make benchmark | tee ${TEST_RESULTS}/go-bench.out
 
