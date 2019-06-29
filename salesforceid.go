@@ -5,193 +5,228 @@ import (
 	"errors"
 )
 
-// SFID provides the interface that SalesforceID implements as a concrete
-// type. This is provided for testing purposes more than any other reason. If
-// you expect you'll want to replace SalesforceID in testing, feel free to use
-// this.
-type SFID interface {
-	To15() (SFID, error)
-	To18() (SFID, error)
-	String() string
-	KeyPrefix() string
-	PodIdentifier() string
-	Reserved() string
-	NumericIdentifier() string
-	Suffix() (string, error)
-}
-
-// SalesforceID stores and manages the Salesforce Identifier
+// SalesforceID stores and manages the Salesforce Identifier and its
+// components. If you wish to edit the identifier, copy bytes into the struct
+// members. For example, if we want to change the NumericIdentifier, one might
+// do:
+// ```
+// sfid, _ := New("00d000000000062eaa")
+// val, _ := Decode(sfid.NumericIdentifier)
+// newVal, _ := Encode(val + 238328)
+// copy(sfid.NumericIdentifier[:], newVal)
+// sfid.String()
+// // Output: 00D000000001062EAA
+// ```
 type SalesforceID struct {
-	id string
+	id                []byte
+	KeyPrefix         []byte // KeyPrefix consists of the first 3 bytes of an id. It is used to identify the object
+	PodIdentifier     []byte // PodIdentifier consists of the fourth and fifth bytes. It maps to the pod on which the record was created
+	Reserved          []byte // Reserved is a single byte reserved for future use. It should always be '0'
+	NumericIdentifier []byte // NumericIdentifier is a Base 62 encoded number that auto-increments for each record. You can decode it with Decode
+	Suffix            []byte // Suffix are the three bytes at the end of an 18 character identifier. These help determine the casing of a 15 character identifier
 }
 
 // While Salesforce IDs use A-Z, a-z, and 0-9 we use this slice to find a
 // value from 0-31.
 var sfidSeq = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345")
 
-// ErrInvalidSFID indicates when an SFID does not meet the necessary
-// requirements of a valid SFID.
-var ErrInvalidSFID = errors.New("sfid provided is invalid")
+// ErrInvalidSFID is returned when an 18 character identifier is provided
+// whose check bytes do not make sense with the 15 character identifier
+var ErrInvalidSFID = errors.New("check bytes do not match identifier")
 
 // ErrInvalidLengthSFID indicates when an SFID is not a known good length
 var ErrInvalidLengthSFID = errors.New("sfids should be 15 or 18 characters")
 
-// ErrNoSuffix is returned when requesting a suffix for an SFID that is fewer
-// than 18 characters.
-var ErrNoSuffix = errors.New("to retrieve a suffix, the sfid must be 18 characters")
+// ErrValueTooLarge is returned when attempting to encode a Base62 value
+// larger than will fit in a NumericIdentifier
+var ErrValueTooLarge = errors.New("value is larger than 62^9")
+
+// ErrInvalidNumericIdentifier is returned when attempting to decode a numeric
+// identifier more than 9 bytes long or has invalid bytes
+var ErrInvalidNumericIdentifier = errors.New("numeric identifier being decoded is invalid")
+
+// ErrInvalidAddition is returned when the NumericIdentifier is already the
+// largest allowed in a 9 digit base62 encoded number
+var ErrInvalidAddition = errors.New("addition would overflow maximum value: 13537086546263552")
+
+// ErrInvalidSubtraction is returned when the amount to subtract from the
+// identifier is greater than the decoded value of the NumericIdentifier
+var ErrInvalidSubtraction = errors.New("subtraction would result in a negative identifier")
 
 // New generates a SalesforceID for usage
-func New(id string) SalesforceID {
-	return SalesforceID{id}
-}
-
-func (s SalesforceID) String() string {
-	return s.id
-}
-
-// To15 converts the given SalesforceID to a 15-character, case-sensitive,
-// Salesforce ID. If the SalesforceID is an 18-character identifier, it
-// ensures that the 15-character identifier is the proper casing.
-func (s SalesforceID) To15() (SFID, error) {
-	oldSfid := s.id
-	if len(oldSfid) != 15 && len(oldSfid) != 18 {
+func New(id string) (*SalesforceID, error) {
+	var err error
+	if len(id) != 15 && len(id) != 18 {
 		return nil, ErrInvalidLengthSFID
 	}
-	if len(oldSfid) == 15 {
-		return SalesforceID{oldSfid}, nil
-	}
-	fifteen, check := []byte(oldSfid[:15]), bytes.ToUpper([]byte(oldSfid[15:]))
-	chunks := [][]byte{
-		fifteen[:5],
-		fifteen[5:10],
-		fifteen[10:],
-	}
-	for i, chunk := range chunks {
-		// NOTE(sigmavirus24) We can probably make this more efficient than
-		// having a nested loop. If we iterate over `fifteen` we can calculate
-		// the index of the check byte (or precalculate the indices) and then
-		// flatten this logic.
-		checkVal := bytes.IndexByte(sfidSeq, check[i])
-		for j, b := range chunk {
-			pow := 1 << uint(j)
-			// In our chunk, our left most byte is the least significant
-			// digit in the calculation that creates the last three
-			// digits. Those three digits are based on the case of the
-			// first 15 bytes. If the chunk looks like 0b11011 that means
-			// the 1st, 2nd, 4th, and 5th bytes in this chunk should be
-			// upper case. So we calculate 1 << j which translates to one
-			// of:
-			// - 0b00001
-			// - 0b00010
-			// - 0b00100
-			// - 0b01000
-			// - 0b10000
-			// And use bitwise and to determine this byte's case
-			if checkVal&pow == pow && 'a' <= b && b <= 'z' {
-				// If this is lower case but should be upper, handle that
-				fifteen[(i*5)+j] = b - 32
-			} else if checkVal&pow == 0 && 'A' <= b && b <= 'Z' {
-				// If this is upper case but should be lower, handle that
-				fifteen[(i*5)+j] = b + 32
-			}
+	idBytes := []byte(id)
+	if len(idBytes) == 18 {
+		idBytes, err = normalize(idBytes)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return SalesforceID{string(fifteen)}, nil
+	if len(id) == 15 {
+		idBytes = computeEighteen(idBytes)
+	}
+	return &SalesforceID{
+		idBytes,
+		idBytes[0:3],
+		idBytes[3:5],
+		idBytes[5:6],
+		idBytes[6:15],
+		idBytes[15:18],
+	}, nil
 }
 
-// To18 converts a 15 character Salesforce ID to an 18 character Salesforce
-// ID. 15 character SFIDs are case-sensitive but 18 character SFIDs are
-// case-insensitive.
-func (s SalesforceID) To18() (SFID, error) {
-	sfid := s.id
-	if len(sfid) != 15 && len(sfid) != 18 {
-		return nil, ErrInvalidLengthSFID
+func computeEighteen(id []byte) []byte {
+	var chunkSum uint
+	newSFID := make([]byte, 15)
+	copy(newSFID, id[0:15])
+
+	for i, b := range id {
+		if i%5 == 0 {
+			if i != 0 {
+				newSFID = append(newSFID, sfidSeq[chunkSum])
+			}
+			chunkSum = 0
+		}
+		if 'A' <= b && b <= 'Z' {
+			chunkSum += 1 << uint(i%5)
+		}
 	}
-	if len(sfid) == 18 {
-		return SalesforceID{sfid}, nil
-	}
-	sfidBytes := []byte(sfid)
-	chunks := [][]byte{
-		sfidBytes[:5],
-		sfidBytes[5:10],
-		sfidBytes[10:],
-	}
-	newSFID := []byte(sfid)
-	for _, chunk := range chunks {
-		chunkSum := sumUppercase(chunk)
-		newSFID = append(newSFID, sfidSeq[chunkSum])
-	}
-	return SalesforceID{string(newSFID)}, nil
+	return append(newSFID, sfidSeq[chunkSum])
 }
 
-// Normalize will create an 18-character Salesforce ID that can be treated as
-// case-insensitive but uses the proper casing so that a user can handle the
-// string version with confidence.
-func (s SalesforceID) Normalize() (SFID, error) {
-	if len(s.id) == 15 {
-		// We can only assume that this wa sa proper 15 character,
-		// case-sensitive SFID so converting it to 18 will do the right thing.
-		return s.To18()
+func normalize(id []byte) ([]byte, error) {
+	check := bytes.ToUpper([]byte(id[15:]))
+	copy(id[15:18], check)
+	for i, b := range id[:15] {
+		checkByte := check[i/5]
+		pow := 1 << uint(i%5)
+		checkVal := bytes.IndexByte(sfidSeq, checkByte)
+		// In each chunk, our left most byte is the least significant
+		// digit in the calculation that creates the last three
+		// digits. Those three digits are based on the case of the
+		// first 15 bytes. If the chunk looks like 0b11011 that means
+		// the 1st, 2nd, 4th, and 5th bytes in this chunk should be
+		// upper case. So we calculate 1 << j which translates to one
+		// of:
+		// - 0b00001
+		// - 0b00010
+		// - 0b00100
+		// - 0b01000
+		// - 0b10000
+		// And use bitwise and to determine this byte's case
+		if checkVal&pow == pow {
+			if '0' <= b && b <= '9' {
+				return nil, ErrInvalidSFID
+			}
+			if 'a' <= b && b <= 'z' {
+				// If this is lower case but should be upper, handle that
+				id[i] = b - 32
+			}
+		} else if checkVal&pow == 0 && 'A' <= b && b <= 'Z' {
+			// If this is upper case but should be lower, handle that
+			id[i] = b + 32
+		}
 	}
-	if len(s.id) != 15 && len(s.id) != 18 {
-		return nil, ErrInvalidLengthSFID
-	}
-	fifteen, err := s.To15()
+	return id, nil
+}
+
+func (s *SalesforceID) String() string {
+	return string(s.id)
+}
+
+// Add a value to the numeric identifier and ensure the resulting identifier
+// is valid.
+func (s *SalesforceID) Add(i uint64) (*SalesforceID, error) {
+	newID := make([]byte, 15)
+	copy(newID, s.id)
+	decoded, err := Decode(s.NumericIdentifier)
 	if err != nil {
 		return nil, err
 	}
-	chunks := [][]byte{
-		[]byte(fifteen.String()),
-		bytes.ToUpper([]byte(s.id[15:])),
+	if decoded == maxID-1 {
+		return nil, ErrInvalidAddition
 	}
-	newSFID := bytes.Join(chunks, []byte{})
-
-	return SalesforceID{string(newSFID)}, nil
-}
-
-// KeyPrefix finds and returns the key prefix section of this SFID. This
-// prefix tends to map to the object but may not be unique within
-// organizations or across organizations.
-// *Note*: The KeyPrefix _is_ case-sensitive but this library does not check
-// prior to returning the prefix.
-func (s SalesforceID) KeyPrefix() string {
-	return s.id[:3]
-}
-
-// PodIdentifier finds and returns the identifier of the pod the record was
-// created in.
-func (s SalesforceID) PodIdentifier() string {
-	return s.id[3:5]
-}
-
-// Reserved returns the reserved byte that may be used for future purposes.
-func (s SalesforceID) Reserved() string {
-	return s.id[5:6]
-}
-
-// NumericIdentifier is the numeric record identifier section for the
-// particular record in Salesforce.
-func (s SalesforceID) NumericIdentifier() string {
-	return s.id[6:15]
-}
-
-// Suffix may return the three character suffix if this SalesforceID is an
-// 18-character SFID. If it's only a 15 character SFID, then it returns an
-// error.
-func (s SalesforceID) Suffix() (string, error) {
-	if len(s.id) == 18 {
-		return s.id[15:], nil
+	encoded, err := Encode(decoded + i)
+	if err != nil {
+		return nil, err
 	}
-	return "", ErrNoSuffix
+	copy(newID[6:15], encoded)
+	return New(string(newID))
 }
 
-func sumUppercase(bs []byte) int {
-	chunkSum := 0
+// Subtract a value from the numeric identifier and ensure the resulting
+// identifier is valid.
+func (s *SalesforceID) Subtract(i uint64) (*SalesforceID, error) {
+	decoded, err := Decode(s.NumericIdentifier)
+	if err != nil {
+		return nil, err
+	}
+	if decoded < i {
+		return nil, ErrInvalidSubtraction
+	}
+	newID := make([]byte, 15)
+	copy(newID, s.id)
+	encoded, err := Encode(decoded - i)
+	if err != nil {
+		return nil, err
+	}
+	copy(newID[6:15], encoded)
+	return New(string(newID))
+}
 
-	for i, b := range bs {
-		if 'A' <= b && b <= 'Z' {
-			chunkSum += 1 << uint(i)
+var table = []byte("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+
+const (
+	zeroString = "000000000"
+	maxID      = 13537086546263552 // == 62 ^ 9
+	base       = 62
+)
+
+// Encode converts an unsigned integer to Base62 for use as a
+// NumericIdentifier. This can only handle 62^9.
+func Encode(u uint64) (string, error) {
+	if u == 0 {
+		return zeroString, nil
+	}
+	if u >= maxID {
+		return "", ErrValueTooLarge
+	}
+	ebytes := make([]byte, 0, 9)
+	for p := uint64(maxID / base); p >= 1; p /= base {
+		m := u / p
+		ebytes = append(ebytes, table[m])
+		u -= m * p
+	}
+	return string(ebytes), nil
+}
+
+// Decode converts bytes to an unsigned integer
+func Decode(src []byte) (uint64, error) {
+	var v uint64
+	var err error
+
+	if len(src) != 9 {
+		return v, ErrInvalidNumericIdentifier
+	}
+
+	m := uint64(1)
+	for i := 8; i >= 0; i-- {
+		c := src[i]
+		if c >= '0' && c <= '9' {
+			v += uint64((c - '0')) * m
+		} else if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') {
+			v += uint64(bytes.IndexByte(table, c)) * m
+		} else {
+			v = 0
+			err = ErrInvalidNumericIdentifier
+			break
 		}
+		m *= 62
 	}
-	return chunkSum
+
+	return v, err
 }
