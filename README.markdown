@@ -8,8 +8,8 @@ This is a library that enables handling and manipulation of Salesforce
 Identifiers. Specifically it enables converting identifiers between 15 
 character (case-sensitive) and 18 character (case-insensitive) versions.
 
-This library lazily parses a Salesforce identifier for the user and provides 
-other convenience methods for handling portions of the identifier.
+This library parses a Salesforce identifier for the user and provides 
+some convenience methods for handling interactions with the identifier.
 
 ## Examples
 
