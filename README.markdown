@@ -1,8 +1,9 @@
 # salesforceid
 
-[![GoDoc](https://godoc.org/github.com/sigmavirus24/salesforceid?status.svg)](https://godoc.org/github.com/sigmavirus24/salesforceid)
-[![CircleCI](https://circleci.com/gh/sigmavirus24/salesforceid.svg?style=svg)](https://circleci.com/gh/sigmavirus24/salesforceid)
-[![GolangCI](https://golangci.com/badges/github.com/sigmavirus24/salesforceid.svg)](https://golangci.com)
+[![GoDoc Reference](https://godoc.org/github.com/sigmavirus24/salesforceid?status.svg)](https://godoc.org/github.com/sigmavirus24/salesforceid)
+[![CircleCI Build Status](https://circleci.com/gh/sigmavirus24/salesforceid.svg?style=svg)](https://circleci.com/gh/sigmavirus24/salesforceid)
+[![Azure Pipelines Build Status](https://dev.azure.com/graffatcolmingov/sigmavirus24/_apis/build/status/sigmavirus24.salesforceid?branchName=master)](https://dev.azure.com/graffatcolmingov/sigmavirus24/_build/latest?definitionId=1&branchName=master)
+[![GolangCI Status](https://golangci.com/badges/github.com/sigmavirus24/salesforceid.svg)](https://golangci.com)
 
 This is a library that enables handling and manipulation of Salesforce 
 Identifiers. Specifically it enables converting identifiers between 15 
