@@ -6,17 +6,8 @@ import (
 )
 
 // SalesforceID stores and manages the Salesforce Identifier and its
-// components. If you wish to edit the identifier, copy bytes into the struct
-// members. For example, if we want to change the NumericIdentifier, one might
-// do:
-// ```
-// sfid, _ := New("00d000000000062eaa")
-// val, _ := Decode(sfid.NumericIdentifier)
-// newVal, _ := Encode(val + 238328)
-// copy(sfid.NumericIdentifier[:], newVal)
-// sfid.String()
-// // Output: 00D000000001062EAA
-// ```
+// components. The full identifier is not an accessible attribute. To retrieve
+// it, use the String method.
 type SalesforceID struct {
 	id                []byte
 	KeyPrefix         []byte // KeyPrefix consists of the first 3 bytes of an id. It is used to identify the object
