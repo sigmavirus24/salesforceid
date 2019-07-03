@@ -19,7 +19,7 @@ type SalesforceID struct {
 
 // While Salesforce IDs use A-Z, a-z, and 0-9 we use this slice to find a
 // value from 0-31.
-var sfidSeq = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345")
+var checkSeq = []byte("ABCDEFGHIJKLMNOPQRSTUVWXYZ012345")
 
 // ErrInvalidSFID is returned when an 18 character identifier is provided
 // whose check bytes do not make sense with the 15 character identifier
@@ -78,7 +78,7 @@ func computeEighteen(id []byte) []byte {
 	for i, b := range id {
 		if i%5 == 0 {
 			if i != 0 {
-				newSFID = append(newSFID, sfidSeq[chunkSum])
+				newSFID = append(newSFID, checkSeq[chunkSum])
 			}
 			chunkSum = 0
 		}
@@ -86,7 +86,7 @@ func computeEighteen(id []byte) []byte {
 			chunkSum += 1 << uint(i%5)
 		}
 	}
-	return append(newSFID, sfidSeq[chunkSum])
+	return append(newSFID, checkSeq[chunkSum])
 }
 
 func normalize(id []byte) ([]byte, error) {
@@ -95,7 +95,7 @@ func normalize(id []byte) ([]byte, error) {
 	for i, b := range id[:15] {
 		checkByte := check[i/5]
 		pow := 1 << uint(i%5)
-		checkVal := bytes.IndexByte(sfidSeq, checkByte)
+		checkVal := bytes.IndexByte(checkSeq, checkByte)
 		// In each chunk, our left most byte is the least significant
 		// digit in the calculation that creates the last three
 		// digits. Those three digits are based on the case of the
