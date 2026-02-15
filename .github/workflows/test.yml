@@ -1,0 +1,40 @@
+name: Test
+on: [push, pull_request]
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [ "1.25.x", "1.26.x" ]
+    runs-on: "ubuntu-latest"
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v5
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Test
+        run: make coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: "./coverage.out"
+      - name: Post coverage to GitHub comment
+        if: github.event_name == "pull_request"
+        env:
+          URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: %{{ github.token }}
+        run: |
+          echo "\`\`\`\n$(go tool cover --func=coverage.out)\n\`\`\`" | gh pr comment "$URL" --body-file=- --delete-last --yes
+      - name: Require minimum test coverage percentage
+        env:
+          TESTCOVERAGE_PCT: 94
+        run: |
+          actual_pct="$(go tool cover --func=coverage.out | awk '/^total:.*%$/ { print substr($3, 1, length($3)-1) }')"
+          echo "Verifying test coverage percentage (minimum allowed: ${TESTCOVERAGE_PCT} ; parsed: ${actual_pct})"
+          # NOTE: sys.exit(True) will be a non-zero exit code, so we only want
+          # that when the actual percentage is lower than our configured
+          # threshold
+          python -c "import sys; sys.exit($actual_pct < $TESTCOVERAGE_PCT)"

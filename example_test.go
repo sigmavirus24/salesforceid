@@ -16,11 +16,11 @@ func GenerateChunks(starting *sfid.SalesforceID, chunkSize uint64) func() (*sfid
 	}
 }
 
-func Example() {
+func ExampleSalesforceID() {
 	s, _ := sfid.New("001000000000000")
 	chunker := GenerateChunks(s, 250000)
 
-	for i := 0; i < 15; i++ {
+	for range 15 {
 		start, end := chunker()
 		fmt.Printf("SELECT Id FROM Account WHERE Id >= %s AND Id <= %s\n", start, end)
 	}
@@ -40,4 +40,70 @@ func Example() {
 	// SELECT Id FROM Account WHERE Id >= 00100000000CaRIAA0 AND Id <= 00100000000DdTYAA0
 	// SELECT Id FROM Account WHERE Id >= 00100000000DdTZAA0 AND Id <= 00100000000EgVpAAK
 	// SELECT Id FROM Account WHERE Id >= 00100000000EgVqAAK AND Id <= 00100000000FjY6AAK
+}
+
+func ExampleNew() {
+	id, err := sfid.New("00D000000000062")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("00D000000000062 => %s", id)
+	// Output: 00D000000000062 => 00D000000000062EAA
+}
+
+func ExampleParse() {
+	id, err := sfid.Parse("00D000000000062", sfid.PostSummer23IdentifierEdition)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("00D000000000062 => %s", id)
+	// Output: 00D000000000062 => 00D000000000062EAA
+}
+
+func ExampleNew_second() {
+	id, err := sfid.New("00d000000000062eaa")
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("00d000000000062eaa => %s", id)
+	// Output: 00d000000000062eaa => 00D000000000062EAA
+}
+
+func ExampleParse_second() {
+	id, err := sfid.Parse("00D000000000062", sfid.PreSummer23IdentifierEdition)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("00d000000000062eaa => %s", id)
+	// Output: 00d000000000062eaa => 00D000000000062EAA
+}
+
+func ExampleDecode() {
+	id, _ := sfid.New("00D000000000062")
+	val, _ := sfid.Decode(id.NumericIdentifier)
+	fmt.Printf("%s == %d", string(id.NumericIdentifier), val)
+	// Output: 00000062 == 374
+}
+
+func ExampleDecode_second() {
+	id, _ := sfid.New("00d000000000062eaa")
+	val, _ := sfid.Decode(id.NumericIdentifier)
+	fmt.Printf("%s == %d", string(id.NumericIdentifier), val)
+	// Output: 00000062 == 374
+}
+
+func ExampleEncode() {
+	id, _ := sfid.New("00d000000000062eaa")
+	val, _ := sfid.Decode(id.NumericIdentifier)
+	encoded, _ := sfid.Encode(val + 238328) // 238328 == 62 * 62 * 62
+	fmt.Printf("%s + 238328 == %s", string(id.NumericIdentifier), encoded)
+	// Output: 00000062 + 238328 == 00001062
+}
+
+func ExampleEncode_second() {
+	id, _ := sfid.New("00d000000000062eaa")
+	val, _ := sfid.Decode(id.NumericIdentifier)
+	encoded, _ := sfid.Encode(val)
+	fmt.Printf("%s == %s", string(id.NumericIdentifier), encoded)
+	// Output: 00000062 == 00000062
 }
