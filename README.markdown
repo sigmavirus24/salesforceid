@@ -2,11 +2,11 @@
 
 [![GoDoc Reference](https://pkg.go.dev/badge/github.com/sigmavirus24/salesforceid?utm_source=godoc)](https://pkg.go.dev/github.com/sigmavirus24/salesforceid)
 
-This is a library that enables handling and manipulation of Salesforce 
-Identifiers. Specifically it enables converting identifiers between 15 
+This is a library that enables handling and manipulation of Salesforce
+Identifiers. Specifically it enables converting identifiers between 15
 character (case-sensitive) and 18 character (case-insensitive) versions.
 
-This library parses a Salesforce identifier for the user and provides 
+This library parses a Salesforce identifier for the user and provides
 some convenience methods for handling interactions with the identifier.
 
 For explanations of how the identifier works see:
@@ -37,10 +37,10 @@ For explanations of how the identifier works see:
 
 ## Examples
 
-It's possible to have different versions of a Salesforce identifier. 15 
-character identifiers are case-sensitive while 18 character identifers are 
-not. As a result, this library always checks and adjusts the casing of 
-identifiers and always produces 18 character identifiers. This allows users to 
+It's possible to have different versions of a Salesforce identifier. 15
+character identifiers are case-sensitive while 18 character identifiers are
+not. As a result, this library always checks and adjusts the casing of
+identifiers and always produces 18 character identifiers. This allows users to
 confidently use which ever form they prefer.
 
 ```go
@@ -64,6 +64,6 @@ func main() {
 }
 ```
 
-Furthermore, one can use this library to perform arithmetic on the 
-identifiers. For an example of where this might be useful see the 
+Furthermore, one can use this library to perform arithmetic on the
+identifiers. For an example of where this might be useful see the
 [example](./example_test.go) in this project.

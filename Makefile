@@ -14,3 +14,6 @@ benchmark: ;$(info ▷ running benchmarks)
 
 coverage: test ;$(info ▷ generating coverage.html)
 	@go tool cover -html=coverage.out -o coverage.html
+
+vulncheck:
+	@govulncheck ./...
