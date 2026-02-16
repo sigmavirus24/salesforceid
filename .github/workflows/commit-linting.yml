@@ -17,10 +17,12 @@ jobs:
         repository: ${{github.event.pull_request.head.repo.full_name}}
         ref: ${{github.event.pull_request.head.ref}}
         fetch-depth: ${{github.event.pull_request.commits}}
+        persist-credentials: false
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v4
       with:
         ref: main
         fetch-depth: 1
+        persist-credentials: false
     - name: Set up Python 3.14
       uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v5
       with:

@@ -253,7 +253,7 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "successful parsing calcuating check suffix (pre Summer '23)",
+			name: "successful parsing calculating check suffix (pre Summer '23)",
 			args: args{
 				id:      "00D000000000062",
 				edition: salesforceid.PreSummer23IdentifierEdition,
@@ -269,7 +269,7 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "successful parsing calcuating check suffix (post Summer '23)",
+			name: "successful parsing calculating check suffix (post Summer '23)",
 			args: args{
 				id:      "00D000000000062",
 				edition: salesforceid.PostSummer23IdentifierEdition,
@@ -285,7 +285,7 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "successful parsing calcuating check suffix (pre Summer '23)",
+			name: "successful parsing calculating check suffix (pre Summer '23)",
 			args: args{
 				id:      "00d000000000062",
 				edition: salesforceid.PreSummer23IdentifierEdition,
@@ -301,7 +301,7 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "successful parsing calcuating check suffix (post Summer '23)",
+			name: "successful parsing calculating check suffix (post Summer '23)",
 			args: args{
 				id:      "00d000000000062",
 				edition: salesforceid.PostSummer23IdentifierEdition,
